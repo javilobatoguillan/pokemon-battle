@@ -1,4 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+body {
+  background-color: #E6F4EA;
+  font-family: 'Press Start 2P', monospace;
+  color: #1B5E20;
+  text-transform: none;
+}
+
+button {
+  transition: all 0.2s ease-in-out;
+}
+
+button:hover {
+  transform: scale(1.05);
+}
+
+img {
+  image-rendering: pixelated;
+}

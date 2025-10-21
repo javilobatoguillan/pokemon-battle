@@ -1,48 +1,86 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const pokemonsData = [
   {
-    name: 'Charmander',
-    type: 'fire',
+    name: "Charmander",
+    type: "fire",
     speed: 60,
     hp: 100,
-    image: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png',
-    attacks: [{ name: 'Ascuas', damage: 15 }, { name: 'Garra', damage: 10 }]
+    image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png",
+    attacks: [
+      { name: "Ascuas", damage: 18 },
+      { name: "Garra", damage: 10 },
+      { name: "Cola Fuego", damage: 12 },
+    ],
   },
   {
-    name: 'Squirtle',
-    type: 'water',
+    name: "Squirtle",
+    type: "water",
     speed: 50,
     hp: 100,
-    image: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png',
-    attacks: [{ name: 'Pistola Agua', damage: 15 }, { name: 'Mordisco', damage: 10 }]
+    image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png",
+    attacks: [
+      { name: "Pistola Agua", damage: 18 },
+      { name: "Mordisco", damage: 10 },
+      { name: "Caparazon", damage: 8 },
+    ],
   },
   {
-    name: 'Bulbasaur',
-    type: 'grass',
+    name: "Bulbasaur",
+    type: "grass",
     speed: 55,
     hp: 100,
-    image: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png',
-    attacks: [{ name: 'Latigazo', damage: 15 }, { name: 'Placaje', damage: 10 }]
+    image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png",
+    attacks: [
+      { name: "Latigazo", damage: 17 },
+      { name: "Placaje", damage: 10 },
+      { name: "Drenadoras", damage: 12 },
+    ],
   },
   {
-    name: 'Pikachu',
-    type: 'electric',
+    name: "Pikachu",
+    type: "electric",
     speed: 90,
     hp: 100,
-    image: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png',
-    attacks: [{ name: 'Impactrueno', damage: 15 }, { name: 'Placaje', damage: 10 }]
-  }
+    image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png",
+    attacks: [
+      { name: "Impactrueno", damage: 18 },
+      { name: "Placaje", damage: 10 },
+      { name: "Rayo", damage: 14 },
+    ],
+  },
 ];
 
 const getPokemonId = (name) => {
-  switch(name) {
-    case 'Charmander': return 4;
-    case 'Squirtle': return 7;
-    case 'Bulbasaur': return 1;
-    case 'Pikachu': return 25;
-    default: return 1;
+  switch (name) {
+    case "Charmander":
+      return 4;
+    case "Squirtle":
+      return 7;
+    case "Bulbasaur":
+      return 1;
+    case "Pikachu":
+      return 25;
+    default:
+      return 1;
   }
+};
+
+const typeEffectiveness = (attackerType, defenderType) => {
+  if (attackerType === "fire" && defenderType === "grass") return 2;
+  if (attackerType === "water" && defenderType === "fire") return 2;
+  if (attackerType === "grass" && defenderType === "water") return 2;
+  if (attackerType === "fire" && defenderType === "water") return 0.5;
+  if (attackerType === "water" && defenderType === "grass") return 0.5;
+  if (attackerType === "grass" && defenderType === "fire") return 0.5;
+  return 1;
+};
+
+const hpColorHex = (hp) => {
+  if (hp > 60) return "#3A8A3A";
+  if (hp > 30) return "#D0A800";
+  return "#B22222";
 };
 
 export default function App() {
@@ -50,143 +88,284 @@ export default function App() {
   const [enemy, setEnemy] = useState(null);
   const [log, setLog] = useState([]);
   const [battleOver, setBattleOver] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [floating, setFloating] = useState([]);
 
   const startBattle = () => {
-    const playerPoke = pokemonsData[Math.floor(Math.random() * pokemonsData.length)];
-    const enemyOptions = pokemonsData.filter(p => p.name !== playerPoke.name);
-    const enemyPoke = enemyOptions[Math.floor(Math.random() * enemyOptions.length)];
+    const p = pokemonsData[Math.floor(Math.random() * pokemonsData.length)];
+    const others = pokemonsData.filter((x) => x.name !== p.name);
+    const e = others[Math.floor(Math.random() * others.length)];
 
-    setPlayer({ 
-      ...playerPoke, 
-      backImage: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/${getPokemonId(playerPoke.name)}.png`
+    setPlayer({
+      ...p,
+      backImage: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/${getPokemonId(
+        p.name
+      )}.png`,
     });
-    setEnemy({ ...enemyPoke });
+    setEnemy({ ...e });
     setLog([]);
     setBattleOver(false);
-  }
+    setFloating([]);
+  };
 
   useEffect(() => {
     startBattle();
   }, []);
 
-  const typeEffectiveness = (attackerType, defenderType) => {
-    if(attackerType === 'fire' && defenderType === 'grass') return 2;
-    if(attackerType === 'water' && defenderType === 'fire') return 2;
-    if(attackerType === 'grass' && defenderType === 'water') return 2;
-    if(attackerType === 'fire' && defenderType === 'water') return 0.5;
-    if(attackerType === 'water' && defenderType === 'grass') return 0.5;
-    if(attackerType === 'grass' && defenderType === 'fire') return 0.5;
-    return 1;
-  }
+  const pushFloat = (text, side = "enemy") => {
+    const id = Math.random().toString(36).slice(2, 9);
+    setFloating((s) => [...s, { id, text, side }]);
+    setTimeout(() => {
+      setFloating((s) => s.filter((f) => f.id !== id));
+    }, 1100);
+  };
 
-  const handleAttack = (attackIndex) => {
-    if(!player || !enemy || battleOver) return;
+  const handleAttack = async (attackIndex) => {
+    if (!player || !enemy || battleOver || isAnimating) return;
 
-    const playerAttack = player.attacks[attackIndex];
-    const enemyAttackIndex = Math.floor(Math.random() * enemy.attacks.length);
-    const enemyAttack = enemy.attacks[enemyAttackIndex];
+    setIsAnimating(true);
+    const playerAtk = player.attacks[attackIndex];
+    const enemyAtk = enemy.attacks[Math.floor(Math.random() * enemy.attacks.length)];
 
-    let first = player.speed >= enemy.speed ? 'player' : 'enemy';
-    const newLog = [];
+    const first = player.speed >= enemy.speed ? "player" : "enemy";
+    const events = [];
 
-    const applyAttack = (attacker, defender, attack) => {
-      const multiplier = typeEffectiveness(attacker.type, defender.type);
-      const damage = Math.floor(attack.damage * multiplier);
-      if(defender === enemy) setEnemy(prev => {
-        const newHp = Math.max(prev.hp - damage, 0);
-        if(newHp === 0) setBattleOver(true);
-        return { ...prev, hp: newHp };
-      });
-      else setPlayer(prev => {
-        const newHp = Math.max(prev.hp - damage, 0);
-        if(newHp === 0) setBattleOver(true);
-        return { ...prev, hp: newHp };
-      });
-      newLog.push(`${attacker.name} usó ${attack.name}! Hizo ${damage} de daño.`);
-    }
+    const apply = (attacker, defender, attack) => {
+      const mult = typeEffectiveness(attacker.type, defender.type);
+      const damage = Math.max(1, Math.floor(attack.damage * mult));
+      events.push({ attacker, defender, attack, damage });
+    };
 
-    if(first === 'player') {
-      applyAttack(player, enemy, playerAttack);
-      if(enemy.hp > 0) applyAttack(enemy, player, enemyAttack);
+    if (first === "player") {
+      apply(player, enemy, playerAtk);
+      if (enemy.hp > 0) apply(enemy, player, enemyAtk);
     } else {
-      applyAttack(enemy, player, enemyAttack);
-      if(player.hp > 0) applyAttack(player, enemy, playerAttack);
+      apply(enemy, player, enemyAtk);
+      if (player.hp > 0) apply(player, enemy, playerAtk);
     }
 
-    setLog(prev => [...prev, ...newLog]);
-  }
+    for (let i = 0; i < events.length; i++) {
+      const ev = events[i];
+      if (ev.attacker === player) {
+        pushFloat(`-${ev.damage}`, "enemy");
+        setEnemy((prev) => {
+          const newHp = Math.max(prev.hp - ev.damage, 0);
+          if (newHp === 0) setBattleOver(true);
+          return { ...prev, hp: newHp };
+        });
+        setLog((l) => [...l, `${player.name} usó ${ev.attack.name}. -${ev.damage}`]);
+      } else {
+        pushFloat(`-${ev.damage}`, "player");
+        setPlayer((prev) => {
+          const newHp = Math.max(prev.hp - ev.damage, 0);
+          if (newHp === 0) setBattleOver(true);
+          return { ...prev, hp: newHp };
+        });
+        setLog((l) => [...l, `${enemy.name} usó ${ev.attack.name}. -${ev.damage}`]);
+      }
+      await new Promise((res) => setTimeout(res, 700));
+      if (battleOver) break;
+    }
 
-  if(!player || !enemy) return <div className="p-5">Cargando...</div>;
+    setIsAnimating(false);
+  };
+
+  if (!player || !enemy) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-green-100">
+        <div className="p-4 rounded-lg border-2 border-green-200 bg-white shadow">Cargando combate...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-green-200 flex flex-col font-mono">
-      <header className="bg-green-700 text-white text-center p-4 font-bold border-b-4 border-green-900">
-        Pokémon Battle - Verde Hoja
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 text-green-900 font-sans">
+      <header className="bg-white/90 backdrop-blur-sm border-b border-green-200">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+          <h1 className="text-lg font-bold">PokéDuelo</h1>
+        </div>
       </header>
 
-      <main className="flex-grow flex flex-col items-center justify-center relative">
-        {/* Contenedor de batalla */}
-        <div className="relative w-full max-w-3xl h-72 bg-green-300 rounded-lg border-4 border-black shadow-lg flex justify-between items-center px-8">
-          {/* Pokémon jugador (espalda) */}
-          <div className="flex flex-col items-center">
-            <img src={player.backImage} alt={player.name} className="w-40 h-40"/>
-            <p className="text-black font-bold text-xl shadow-md">{player.name}</p>
-            <div className="h-5 w-40 bg-gray-400 rounded border-2 border-black mt-1">
-              <div className="h-5 bg-green-500 rounded transition-all duration-500" style={{ width: `${player.hp}%` }}/>
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        <section
+          className="bg-white shadow-lg rounded-2xl border border-green-100 p-4
+                     flex flex-col-reverse md:flex-row gap-4 md:gap-6 items-stretch"
+        >
+          {/* Player */}
+          <div className="flex-1 flex flex-col items-center md:items-start gap-3">
+            <div className="w-full flex flex-col items-center md:items-start gap-2">
+              <div className="flex items-center gap-3 w-full">
+                <div className="relative">
+                  <img
+                    src={player.backImage}
+                    alt={player.name}
+                    className="w-28 h-28 md:w-36 md:h-36 object-contain"
+                  />
+                  <div className="absolute inset-0 pointer-events-none flex items-start justify-center">
+                    <AnimatePresence>
+                      {floating
+                        .filter((f) => f.side === "player")
+                        .map((f) => (
+                          <motion.span
+                            key={f.id}
+                            initial={{ y: -6, opacity: 1 }}
+                            animate={{ y: -40, opacity: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.9 }}
+                            className="text-sm font-bold text-red-600"
+                          >
+                            {f.text}
+                          </motion.span>
+                        ))}
+                    </AnimatePresence>
+                  </div>
+                </div>
+
+                <div className="flex-1">
+                  <div className="font-semibold text-base">{player.name}</div>
+                  <div className="mt-2">
+                    <div className="w-full bg-green-50 border border-green-100 rounded-md h-4 overflow-hidden">
+                      <div
+                        className="h-4 transition-all duration-500"
+                        style={{
+                          width: `${player.hp}%`,
+                          background: `linear-gradient(90deg, ${hpColorHex(player.hp)}, ${hpColorHex(
+                            Math.max(player.hp - 10, 0)
+                          )})`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Attacks */}
+              <div className="flex flex-wrap justify-center mt-4 gap-2">
+  {player.attacks.map((atk, i) => (
+    <button
+      key={i}
+      className={`py-2 px-4 font-bold rounded-lg border-2 border-green-700 text-green-700 transition-colors duration-300 ${
+        battleOver
+          ? 'bg-gray-400 cursor-not-allowed border-gray-400 text-gray-700'
+          : 'bg-white hover:bg-green-200'
+      }`}
+      disabled={battleOver}
+      onClick={() => handleAttack(i)}
+    >
+      {atk.name}
+    </button>
+  ))}
+</div>
+
             </div>
           </div>
 
-          {/* Pokémon enemigo */}
-          <div className="flex flex-col items-center">
-            <img src={enemy.image} alt={enemy.name} className="w-40 h-40"/>
-            <p className="text-black font-bold text-xl shadow-md">{enemy.name}</p>
-            <div className="h-5 w-40 bg-gray-400 rounded border-2 border-black mt-1">
-              <div className="h-5 bg-green-500 rounded transition-all duration-500" style={{ width: `${enemy.hp}%` }}/>
+          {/* Enemy */}
+          <div className="flex-1 flex flex-col items-center md:items-end gap-3">
+            <div className="w-full flex flex-col items-center md:items-end gap-2">
+              <div className="flex items-center gap-3 w-full justify-center md:justify-end">
+                <div className="flex-1 md:text-right">
+                  <div className="font-semibold text-base">{enemy.name}</div>
+                  <div className="mt-2">
+                    <div className="w-full bg-green-50 border border-green-100 rounded-md h-4 overflow-hidden">
+                      <div
+                        className="h-4 transition-all duration-500"
+                        style={{
+                          width: `${enemy.hp}%`,
+                          background: `linear-gradient(90deg, ${hpColorHex(enemy.hp)}, ${hpColorHex(
+                            Math.max(enemy.hp - 10, 0)
+                          )})`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <img
+                    src={enemy.image}
+                    alt={enemy.name}
+                    className="w-28 h-28 md:w-36 md:h-36 object-contain"
+                  />
+                  <div className="absolute inset-0 pointer-events-none flex items-start justify-center">
+                    <AnimatePresence>
+                      {floating
+                        .filter((f) => f.side === "enemy")
+                        .map((f) => (
+                          <motion.span
+                            key={f.id}
+                            initial={{ y: -6, opacity: 1 }}
+                            animate={{ y: -40, opacity: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.9 }}
+                            className="text-sm font-bold text-red-600"
+                          >
+                            {f.text}
+                          </motion.span>
+                        ))}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Cuadro de texto */}
-        <div className="w-full max-w-3xl bg-white bg-opacity-90 border-t-4 border-black p-2 rounded-t-lg mt-2 text-sm">
-          {log[log.length - 1] || "¡Comienza la batalla!"}
-        </div>
-
-        {/* Botones de ataque */}
-        <div className="flex flex-wrap justify-center mt-4 gap-2">
-          {player.attacks.map((atk, i) => (
-            <button
-              key={i}
-              className={`py-2 px-4 font-bold text-white rounded-lg ${
-                battleOver ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
-              }`}
-              disabled={battleOver}
-              onClick={() => handleAttack(i)}
-            >
-              {atk.name}
-            </button>
-          ))}
-        </div>
-
-        {/* Popup de fin de batalla */}
-        {battleOver && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg border-4 border-black flex flex-col items-center shadow-lg">
-              <p className="text-2xl font-bold mb-4">
-                {player.hp === 0 ? "¡Perdiste!" : "¡Ganaste!"}
-              </p>
-              <button
-                className="py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg border-2 border-black"
-                onClick={startBattle}
-              >
-                Volver a jugar
-              </button>
-            </div>
+        {/* Battle log simplified */}
+        <section className="mt-4 max-w-4xl mx-auto">
+          <div className="bg-white border border-green-50 rounded-lg p-3 text-sm text-center shadow-sm">
+            <div className="min-h-[2rem]">{log[log.length - 1] || "¡Comienza la batalla!"}</div>
           </div>
-        )}
+        </section>
+
+        {/* Restart */}
+        <section className="mt-4 flex justify-center gap-3">
+          <button
+            className="px-4 py-2 bg-white border border-green-100 rounded-lg shadow text-green-700 font-semibold hover:bg-green-50"
+            onClick={startBattle}
+          >
+            Reiniciar
+          </button>
+        </section>
       </main>
 
-      <footer className="bg-green-700 text-white p-4 text-center border-t-4 border-green-900">
-        © 2025 Javier's Pokémon Battle
+      {/* Result popup */}
+      <AnimatePresence>
+        {battleOver && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.8 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl border border-green-50"
+            >
+              <h2 className="text-xl font-bold mb-2">
+                {player.hp === 0 ? "Has perdido" : "¡Victoria!"}
+              </h2>
+              <p className="text-sm text-green-700/80 mb-4">
+                {player.hp === 0 ? `${enemy.name} te derrotó.` : `Has derrotado a ${enemy.name}.`}
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={startBattle}
+                  className="px-4 py-2 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800"
+                >
+                  Volver a jugar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <footer className="mt-8 py-6 text-center text-xs text-green-600">
+        © 2025 — Demo PokéDuelo · JLobato
       </footer>
     </div>
   );
