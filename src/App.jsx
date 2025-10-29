@@ -1,246 +1,388 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const pokemonsData = [
+  {
+    id: 4,
+    name: "Charmander",
+    type: "fire",
+    speed: 60,
+    hp: 100,
+    image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png",
+    attacks: [
+      { name: "Ascuas", damage: 18 },
+      { name: "Garra", damage: 10 },
+      { name: "Cola Fuego", damage: 12 },
+    ],
+  },
+  {
+    id: 7,
+    name: "Squirtle",
+    type: "water",
+    speed: 50,
+    hp: 100,
+    image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png",
+    attacks: [
+      { name: "Pistola Agua", damage: 18 },
+      { name: "Mordisco", damage: 10 },
+      { name: "Caparazon", damage: 8 },
+    ],
+  },
+  {
+    id: 1,
+    name: "Bulbasaur",
+    type: "grass",
+    speed: 55,
+    hp: 100,
+    image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png",
+    attacks: [
+      { name: "Latigazo", damage: 17 },
+      { name: "Placaje", damage: 10 },
+      { name: "Drenadoras", damage: 12 },
+    ],
+  },
+  {
+    id: 25,
+    name: "Pikachu",
+    type: "electric",
+    speed: 90,
+    hp: 100,
+    image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png",
+    attacks: [
+      { name: "Impactrueno", damage: 18 },
+      { name: "Placaje", damage: 10 },
+      { name: "Rayo", damage: 14 },
+    ],
+  },
+  {
+    id: 26,
+    name: "Raichu",
+    type: "electric",
+    speed: 100,
+    hp: 100,
+    image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/26.png",
+    attacks: [
+      { name: "Impactrueno", damage: 20 },
+      { name: "Placaje", damage: 12 },
+      { name: "Rayo", damage: 16 },
+    ],
+  },
+  {
+    id: 153,
+    name: "Bayleef",
+    type: "grass",
+    speed: 100,
+    hp: 100,
+    image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/153.png",
+    attacks: [
+      { name: "Placaje", damage: 12 },
+      { name: "Hoja Afilada", damage: 18 },
+      { name: "Derribo", damage: 20 },
+    ],
+  },
+];
+
+const typeEffectiveness = (attackerType, defenderType) => {
+  if (attackerType === "fire" && defenderType === "grass") return 2;
+  if (attackerType === "water" && defenderType === "fire") return 2;
+  if (attackerType === "grass" && defenderType === "water") return 2;
+  if (attackerType === "electric" && defenderType === "water") return 2;
+  if (attackerType === "fire" && defenderType === "water") return 0.5;
+  if (attackerType === "water" && defenderType === "grass") return 0.5;
+  if (attackerType === "grass" && defenderType === "fire") return 0.5;
+  if (attackerType === "electric" && defenderType === "grass") return 0.5;
+  return 1;
+};
+
+const hpColorHex = (hp) => {
+  if (hp > 60) return "#3A8A3A";
+  if (hp > 30) return "#D0A800";
+  return "#B22222";
+};
+
 export default function App() {
   const [player, setPlayer] = useState(null);
   const [enemy, setEnemy] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [battleLog, setBattleLog] = useState([]);
+  const [log, setLog] = useState([]);
   const [battleOver, setBattleOver] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [attackEffect, setAttackEffect] = useState(null);
+  const [floating, setFloating] = useState([]);
 
-  const getRandomPokemonId = () => Math.floor(Math.random() * 151) + 1;
+  const startBattle = () => {
+    const p = pokemonsData[Math.floor(Math.random() * pokemonsData.length)];
+    const others = pokemonsData.filter((x) => x.name !== p.name);
+    const e = others[Math.floor(Math.random() * others.length)];
 
-  const getPokemon = async (id) => {
-    const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
-    const data = await res.json();
-    return {
-      name: data.name,
-      type: data.types[0].type.name,
-      hp: 100,
-      attack: data.stats.find((s) => s.stat.name === "attack").base_stat,
-      speed: data.stats.find((s) => s.stat.name === "speed").base_stat,
-      front: data.sprites.front_default,
-      back: data.sprites.back_default,
-    };
-  };
+    setPlayer({
+  ...p,
+  backImage: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/${p.id}.png`
+});
 
-  const typeMultiplier = (a, d) => {
-    const chart = {
-      fire: { grass: 2, water: 0.5 },
-      water: { fire: 2, grass: 0.5 },
-      grass: { water: 2, fire: 0.5 },
-      electric: { water: 2, ground: 0 },
-    };
-    return chart[a]?.[d] || 1;
-  };
-
-  const startBattle = async () => {
-    setLoading(true);
-    const playerData = await getPokemon(getRandomPokemonId());
-    let enemyData = await getPokemon(getRandomPokemonId());
-    while (enemyData.name === playerData.name) {
-      enemyData = await getPokemon(getRandomPokemonId());
-    }
-    setPlayer(playerData);
-    setEnemy(enemyData);
-    setBattleLog([]);
+    setEnemy({ ...e });
+    setLog([]);
     setBattleOver(false);
-    setAttackEffect(null);
-    setLoading(false);
+    setFloating([]);
   };
 
   useEffect(() => {
     startBattle();
   }, []);
 
-  const triggerEffect = (type, target) => {
-    const colorMap = {
-      fire: "bg-red-500",
-      water: "bg-blue-400",
-      grass: "bg-green-400",
-      electric: "bg-yellow-300",
-      default: "bg-gray-400",
-    };
-    const color = colorMap[type] || colorMap.default;
-    setAttackEffect({ color, target });
-    setTimeout(() => setAttackEffect(null), 600);
+  const pushFloat = (text, side = "enemy") => {
+    const id = Math.random().toString(36).slice(2, 9);
+    setFloating((s) => [...s, { id, text, side }]);
+    setTimeout(() => {
+      setFloating((s) => s.filter((f) => f.id !== id));
+    }, 1100);
   };
 
-  const attack = async () => {
-    if (battleOver || isAnimating) return;
+  const handleAttack = async (attackIndex) => {
+    if (!player || !enemy || battleOver || isAnimating) return;
 
     setIsAnimating(true);
+    const playerAtk = player.attacks[attackIndex];
+    const enemyAtk = enemy.attacks[Math.floor(Math.random() * enemy.attacks.length)];
+
     const first = player.speed >= enemy.speed ? "player" : "enemy";
-    const turns = first === "player" ? ["player", "enemy"] : ["enemy", "player"];
+    const events = [];
 
-    for (let turn of turns) {
-      if (battleOver) break;
+    const apply = (attacker, defender, attack) => {
+      const mult = typeEffectiveness(attacker.type, defender.type);
+      const damage = Math.max(1, Math.floor(attack.damage * mult));
+      events.push({ attacker, defender, attack, damage });
+    };
 
-      const attacker = turn === "player" ? player : enemy;
-      const defender = turn === "player" ? enemy : player;
-      const mult = typeMultiplier(attacker.type, defender.type);
-      const damage = Math.floor(attacker.attack * 0.2 * mult);
-      const newHp = Math.max(defender.hp - damage, 0);
+    if (first === "player") {
+      apply(player, enemy, playerAtk);
+      if (enemy.hp > 0) apply(enemy, player, enemyAtk);
+    } else {
+      apply(enemy, player, enemyAtk);
+      if (player.hp > 0) apply(player, enemy, playerAtk);
+    }
 
-      triggerEffect(attacker.type, turn === "player" ? "enemy" : "player");
-
-      if (turn === "player") {
-        setEnemy((prev) => ({ ...prev, hp: newHp }));
+    for (let i = 0; i < events.length; i++) {
+      const ev = events[i];
+      if (ev.attacker === player) {
+        pushFloat(`-${ev.damage}`, "enemy");
+        setEnemy((prev) => {
+          const newHp = Math.max(prev.hp - ev.damage, 0);
+          if (newHp === 0) setBattleOver(true);
+          return { ...prev, hp: newHp };
+        });
+        setLog((l) => [...l, `${player.name} usó ${ev.attack.name}. -${ev.damage}`]);
       } else {
-        setPlayer((prev) => ({ ...prev, hp: newHp }));
+        pushFloat(`-${ev.damage}`, "player");
+        setPlayer((prev) => {
+          const newHp = Math.max(prev.hp - ev.damage, 0);
+          if (newHp === 0) setBattleOver(true);
+          return { ...prev, hp: newHp };
+        });
+        setLog((l) => [...l, `${enemy.name} usó ${ev.attack.name}. -${ev.damage}`]);
       }
-
-      setBattleLog((l) => [
-        ...l,
-        `${attacker.name} (${attacker.type}) ataca y causa ${damage} de daño.`,
-      ]);
-
-      if (newHp <= 0) {
-        setBattleOver(true);
-        setBattleLog((l) => [...l, `${attacker.name} gana el combate.`]);
-        break;
-      }
-
-      await new Promise((res) => setTimeout(res, 1000));
+      await new Promise((res) => setTimeout(res, 700));
+      if (battleOver) break;
     }
 
     setIsAnimating(false);
   };
 
-  if (loading || !player || !enemy) {
+  if (!player || !enemy) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-green-100">
-        <div className="p-4 rounded-lg border-2 border-green-200 bg-white shadow">
-          Cargando Pokémon...
-        </div>
+        <div className="p-4 rounded-lg border-2 border-green-200 bg-white shadow">Cargando combate...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 text-green-900 font-sans flex flex-col items-center py-6 relative overflow-hidden">
-      <h1 className="text-2xl font-bold mb-6">PokéDuelo</h1>
-
-      {/* CONTENEDOR PRINCIPAL — Cambia el orden en móvil */}
-      <div className="flex flex-col-reverse md:flex-row items-center gap-10 relative">
-        {/* Pokémon del jugador */}
-        <motion.div
-          animate={isAnimating ? { x: [0, 20, 0] } : {}}
-          transition={{ duration: 0.3 }}
-          className="flex flex-col items-center"
-        >
-          <img src={player.back} alt={player.name} className="w-32 h-32" />
-          <h2 className="capitalize text-lg font-semibold mt-2">{player.name}</h2>
-          <div className="w-32 bg-green-100 rounded-md overflow-hidden mt-2">
-            <div
-              className="h-3 bg-green-600 transition-all duration-500"
-              style={{ width: `${player.hp}%` }}
-            />
-          </div>
-          <p className="text-sm mt-1">HP: {player.hp}</p>
-        </motion.div>
-
-        {/* Efecto de ataque */}
-        <AnimatePresence>
-          {attackEffect && (
-            <motion.div
-              key="attack"
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1.5, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className={`absolute ${
-                attackEffect.target === "enemy"
-                  ? "right-32 md:right-64"
-                  : "left-32 md:left-64"
-              } top-20 md:top-10 w-10 h-10 rounded-full ${attackEffect.color} shadow-lg`}
-            />
-          )}
-        </AnimatePresence>
-
-        {/* VS */}
-        <span className="text-3xl font-bold md:order-none">⚡ VS ⚡</span>
-
-        {/* Pokémon enemigo */}
-        <motion.div
-          animate={isAnimating ? { x: [0, -20, 0] } : {}}
-          transition={{ duration: 0.3 }}
-          className="flex flex-col items-center"
-        >
-          <img src={enemy.front} alt={enemy.name} className="w-32 h-32" />
-          <h2 className="capitalize text-lg font-semibold mt-2">{enemy.name}</h2>
-          <div className="w-32 bg-green-100 rounded-md overflow-hidden mt-2">
-            <div
-              className="h-3 bg-green-600 transition-all duration-500"
-              style={{ width: `${enemy.hp}%` }}
-            />
-          </div>
-          <p className="text-sm mt-1">HP: {enemy.hp}</p>
-        </motion.div>
-      </div>
-
-      {/* Botones */}
-      <div className="mt-8 flex gap-4">
-        <button
-          onClick={attack}
-          disabled={battleOver}
-          className={`px-4 py-2 rounded-lg border-2 border-green-700 font-semibold transition ${
-            battleOver
-              ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-              : "bg-white text-green-700 hover:bg-green-100"
-          }`}
-        >
-          Atacar
-        </button>
-
-        <button
-          onClick={startBattle}
-          className="px-4 py-2 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800"
-        >
-          Nuevo combate
-        </button>
-      </div>
-
-      {/* Registro */}
-      <div className="mt-6 bg-white border border-green-100 rounded-lg p-4 shadow w-full max-w-md">
-        <h3 className="font-semibold text-center mb-2">Registro de batalla</h3>
-        <div className="text-sm h-32 overflow-y-auto">
-          {battleLog.map((line, i) => (
-            <div key={i}>{line}</div>
-          ))}
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 text-green-900 font-sans">
+      <header className="bg-white/90 backdrop-blur-sm border-b border-green-200">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+          <h1 className="text-lg font-bold">PokéDuelo</h1>
         </div>
-      </div>
+      </header>
 
-      {/* Modal de fin */}
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        <section
+          className="bg-white shadow-lg rounded-2xl border border-green-100 p-4
+                     flex flex-col-reverse md:flex-row gap-4 md:gap-6 items-stretch"
+        >
+          {/* Player */}
+          <div className="flex-1 flex flex-col items-center md:items-start gap-3">
+            <div className="w-full flex flex-col items-center md:items-start gap-2">
+              <div className="flex items-center gap-3 w-full">
+                <div className="relative">
+                  <img
+                    src={player.backImage}
+                    alt={player.name}
+                    className="w-28 h-28 md:w-36 md:h-36 object-contain"
+                  />
+                  <div className="absolute inset-0 pointer-events-none flex items-start justify-center">
+                    <AnimatePresence>
+                      {floating
+                        .filter((f) => f.side === "player")
+                        .map((f) => (
+                          <motion.span
+                            key={f.id}
+                            initial={{ y: -6, opacity: 1 }}
+                            animate={{ y: -40, opacity: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.9 }}
+                            className="text-sm font-bold text-red-600"
+                          >
+                            {f.text}
+                          </motion.span>
+                        ))}
+                    </AnimatePresence>
+                  </div>
+                </div>
+
+                <div className="flex-1">
+                  <div className="font-semibold text-base">{player.name}</div>
+                  <div className="mt-2">
+                    <div className="w-full bg-green-50 border border-green-100 rounded-md h-4 overflow-hidden">
+                      <div
+                        className="h-4 transition-all duration-500"
+                        style={{
+                          width: `${player.hp}%`,
+                          background: `linear-gradient(90deg, ${hpColorHex(player.hp)}, ${hpColorHex(
+                            Math.max(player.hp - 10, 0)
+                          )})`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Attacks */}
+              <div className="flex flex-wrap justify-center mt-4 gap-2">
+  {player.attacks.map((atk, i) => (
+    <button
+      key={i}
+      className={`py-2 px-4 font-bold rounded-lg border-2 border-green-700 text-green-700 transition-colors duration-300 ${
+        battleOver
+          ? 'bg-gray-400 cursor-not-allowed border-gray-400 text-gray-700'
+          : 'bg-white hover:bg-green-200'
+      }`}
+      disabled={battleOver}
+      onClick={() => handleAttack(i)}
+    >
+      {atk.name}
+    </button>
+  ))}
+</div>
+
+            </div>
+          </div>
+
+          {/* Enemy */}
+          <div className="flex-1 flex flex-col items-center md:items-end gap-3">
+            <div className="w-full flex flex-col items-center md:items-end gap-2">
+              <div className="flex items-center gap-3 w-full justify-center md:justify-end">
+                <div className="flex-1 md:text-right">
+                  <div className="font-semibold text-base">{enemy.name}</div>
+                  <div className="mt-2">
+                    <div className="w-full bg-green-50 border border-green-100 rounded-md h-4 overflow-hidden">
+                      <div
+                        className="h-4 transition-all duration-500"
+                        style={{
+                          width: `${enemy.hp}%`,
+                          background: `linear-gradient(90deg, ${hpColorHex(enemy.hp)}, ${hpColorHex(
+                            Math.max(enemy.hp - 10, 0)
+                          )})`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <img
+                    src={enemy.image}
+                    alt={enemy.name}
+                    className="w-28 h-28 md:w-36 md:h-36 object-contain"
+                  />
+                  <div className="absolute inset-0 pointer-events-none flex items-start justify-center">
+                    <AnimatePresence>
+                      {floating
+                        .filter((f) => f.side === "enemy")
+                        .map((f) => (
+                          <motion.span
+                            key={f.id}
+                            initial={{ y: -6, opacity: 1 }}
+                            animate={{ y: -40, opacity: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.9 }}
+                            className="text-sm font-bold text-red-600"
+                          >
+                            {f.text}
+                          </motion.span>
+                        ))}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Battle log simplified */}
+        <section className="mt-4 max-w-4xl mx-auto">
+          <div className="bg-white border border-green-50 rounded-lg p-3 text-sm text-center shadow-sm">
+            <div className="min-h-[2rem]">{log[log.length - 1] || "¡Comienza la batalla!"}</div>
+          </div>
+        </section>
+
+        {/* Restart */}
+        <section className="mt-4 flex justify-center gap-3">
+          <button
+            className="px-4 py-2 bg-white border border-green-100 rounded-lg shadow text-green-700 font-semibold hover:bg-green-50"
+            onClick={startBattle}
+          >
+            Reiniciar
+          </button>
+        </section>
+      </main>
+
+      {/* Result popup */}
       <AnimatePresence>
         {battleOver && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           >
             <motion.div
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
-              className="bg-white rounded-2xl p-6 max-w-sm text-center"
+              exit={{ scale: 0.8 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl border border-green-50"
             >
-              <h2 className="text-xl font-bold mb-2">Fin del combate</h2>
-              <p className="text-green-700 mb-4">
-                {player.hp === 0 ? "Has perdido..." : "¡Victoria!"}
+              <h2 className="text-xl font-bold mb-2">
+                {player.hp === 0 ? "Has perdido" : "¡Victoria!"}
+              </h2>
+              <p className="text-sm text-green-700/80 mb-4">
+                {player.hp === 0 ? `${enemy.name} te derrotó.` : `Has derrotado a ${enemy.name}.`}
               </p>
-              <button
-                onClick={startBattle}
-                className="px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800"
-              >
-                Volver a jugar
-              </button>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={startBattle}
+                  className="px-4 py-2 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800"
+                >
+                  Volver a jugar
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <footer className="mt-8 py-6 text-center text-xs text-green-600">
+        © 2025 — Demo PokéDuelo · JLobato
+      </footer>
     </div>
   );
 }
